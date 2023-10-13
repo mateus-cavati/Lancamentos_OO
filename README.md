@@ -1,5 +1,10 @@
 # Lancamentos dos projetos da disciplina de OO
-OBS.: Os lancamentos estão na branch "master"
+OBS.: Os lancamentos estao na branch "master"
 
 1ª Lancamento 15/09 
-  Projeto: universo interativo para registrar formas geométricas bidimensionais 
+  Projeto: universo interativo para registrar formas geometricas bidimensionais. 
+  
+2ª Lancamento 25/09
+  Projeto: implementacao do universo interativo, foram implementadas as funcionalidades de registrar no minimo dois pontos para a construcao das figuras geometricas e a verificacao da sobreposicao das figuras.
+  
+3ª Lancamento
