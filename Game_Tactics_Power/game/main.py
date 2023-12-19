@@ -2,6 +2,7 @@ import pygame
 import random
 import control.button as button
 import sys
+import json
 #from control.fighter import Fighter
 
 pygame.init()
@@ -27,6 +28,11 @@ potion = False
 potion_effect = 15
 clicked = False
 game_over = 0
+total_wins = 0
+total_losses = 0
+victory_counted = False
+defeat_counted = False
+
 
 
 #definicao de cor e fonte global
@@ -49,7 +55,6 @@ victory_img = pygame.image.load('view/img/Icons/victory.png').convert_alpha()
 defeat_img = pygame.image.load('view/img/Icons/defeat.png').convert_alpha()
 #espada cursor
 sword_img = pygame.image.load('view/img/Icons/sword.png').convert_alpha()
-
 
 
 #funcao para entrada do texto
@@ -269,6 +274,87 @@ bottom_panel = 150
 screen_width = 800
 screen_height = 400 + bottom_panel
 
+def update_stats(result):
+    global total_wins, total_losses, victory_counted, defeat_counted
+    if result == 'Win' and not victory_counted:
+        total_wins += 1
+        victory_counted = True
+        DataDados.update_user_stats(DataDados.name, 'Win')
+    elif result == 'Loss' and not defeat_counted:
+        total_losses += 1
+        defeat_counted = True
+        DataDados.update_user_stats(DataDados.name, 'Loss')
+    DataDados.save_user_stats()
+
+def userName():
+    user_input = ""
+    active = True
+
+    while active:
+        screen.fill((0, 0, 0))
+
+        draw_text('Digite o nome do usuário:', font, (255, 255, 255), 20, 20)
+        draw_text(user_input, font, (255, 255, 255), 20, 100)
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    active = False
+                elif event.key == pygame.K_BACKSPACE:
+                    user_input = user_input[:-1]
+                else:
+                    user_input += event.unicode
+    return user_input
+
+def write_json(file_path, data):
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
+
+class DataDados:
+    name = userName()
+
+    jsonDirectory = r"db\banco-dados.json"
+
+    userList = []
+
+    class User:
+        def __init__(self, name, victory, defeat):
+            self.nome = name
+            self.victory = victory
+            self.defeat = defeat
+
+    with open(jsonDirectory) as fp:
+        userList = json.load(fp)
+
+    newUser = User(name, 0, 0)
+    convertUserd = vars(newUser)
+    userList.append(convertUserd)
+
+    def update_user_stats(name, result):
+        for user in DataDados.userList:
+            if user['nome'] == name:
+                if result == 'Win':
+                    user['victory'] += 1
+                elif result == 'Loss':
+                    user["defeat"] += 1
+    def save_user_stats():
+        write_json(DataDados.jsonDirectory, DataDados.userList)
+
+    with open(jsonDirectory, "w") as updateFile:
+        json.dump(userList, updateFile, indent=4)
+
+    def updateUserName(oldName, newName, userList):
+        for i in range(len(userList)):
+            if userList[i]["name"] == oldName:
+                userList[i]["name"] = newName
+
+    def updateJson(directory, list):
+        with open(directory, "w") as updateFile:
+            json.dump(list, updateFile, indent=4)
+
 #_________________________________________________________________________
 #inicializacao do game
 def game():
@@ -282,6 +368,8 @@ def game():
     clicked = False
     game_over = 0
     run = True
+    global total_wins, total_losses, victory_counted, defeat_counted
+
     while run:
 
         clock.tick(fps)
@@ -400,13 +488,16 @@ def game():
         if alive_bandits == 0:
             game_over = 1
 
-
-        #checa o game over
         if game_over != 0:
             if game_over == 1:
                 screen.blit(victory_img, (250, 50))
+                pygame.display.update()
+                update_stats('Win')  
             if game_over == -1:
                 screen.blit(defeat_img, (290, 50))
+                pygame.display.update()
+                update_stats('Loss')  
+
             if restart_button.draw():
                 knight.reset()
                 for bandit in bandit_list:
@@ -414,6 +505,8 @@ def game():
                 current_fighter = 1
                 action_cooldown
                 game_over = 0
+                victory_counted = False  
+                defeat_counted = False
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -431,8 +524,10 @@ def game():
 
 
 
+
 # Função para o menu
 def main_menu():
+    global total_wins, total_losses
     while True:
         screen.fill(BLACK)
         draw_bg()
@@ -458,23 +553,40 @@ def main_menu():
                     sys.exit()
 # Função Ranking
 def Ranking():
-	run = True
-	while run:
-		screen.fill(BLACK)
-		screen.blit(pergaminho_img, (0, 0))
-		title_font = pygame.font.SysFont('Times New Roman', 60)
-		draw_text("RANKING", title_font, BLACK, 260, 40)
-		draw_text('Pressione ESC para retornar', pygame.font.SysFont('Times New Roman', 15), red, 0, 530)
-		pygame.display.flip()
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
-				sys.exit()
-			elif event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_ESCAPE:
-					run = False
+    run = True
+    scroll_offset = 0
+    while run:
+        screen.fill(BLACK)
+        screen.blit(pergaminho_img, (0, 0))
+        title_font = pygame.font.SysFont('Times New Roman', 60)
+        draw_text("RANKING", title_font, BLACK, 260, 40)
+        sorted_users = sorted(DataDados.userList, key=lambda x: x["victory"], reverse=True)
+        if scroll_offset < 0:
+            scroll_offset = 0
+        elif scroll_offset > len(sorted_users) - 10:
+            scroll_offset = max(0, len(sorted_users) - 10)
+        for i in range(scroll_offset, min(scroll_offset + 10, len(sorted_users))):
+            if 0 <= i < len(sorted_users):
+                user = sorted_users[i]
+                user_text = f"{i + 1}. {user['nome']} - Vitórias: {user['victory']} | Derrotas: {user['defeat']}"
+                draw_text(user_text, font, red, 50, 120 + (i - scroll_offset) * 30)
+
+        draw_text('Pressione ESC para retornar', pygame.font.SysFont('Times New Roman', 15), red, 0, 530)
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    run = False
+                elif event.key == pygame.K_UP:
+                    scroll_offset = max(0, scroll_offset - 1)
+                elif event.key == pygame.K_DOWN:
+                    scroll_offset = min(len(sorted_users) - 10, scroll_offset + 1)
 
 
 # Inicia o menu principal
 main_menu()
 ''
+
