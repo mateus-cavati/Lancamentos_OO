@@ -415,7 +415,8 @@ def game():
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                run = False
+                pygame.quit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 clicked = True
             elif event.type == pygame.KEYDOWN:
