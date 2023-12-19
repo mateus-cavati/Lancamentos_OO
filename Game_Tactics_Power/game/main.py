@@ -429,7 +429,6 @@ def game():
 
         pygame.display.update()
 
-#    pygame.quit()
 
 
 # Função para o menu
